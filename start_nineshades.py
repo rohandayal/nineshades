@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
-from os import path, environ
+from os import path
 
 from tornado import web, ioloop, gen
+from tornado.options import options
 
 from handlers import *
+from openshiftparams import port, address, savedir
 
 def load_app(port, root):
     settings = {
@@ -19,16 +21,19 @@ def load_app(port, root):
 
     routers = [
         (r"/", HomeHandler),
+        (r"/uploadphoto", UploadHandler),
+        (r"/myshade/(.*)", tornado.web.StaticFileHandler, {'path': savedir})
     ]
 
     application = web.Application(
         routers,
         **settings
     )
-    application.listen(port)
+    application.listen(port, address=address)
     tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == "__main__":
     root = path.dirname(__file__)
-    port = 10101
-    load_app(port, root)
+    serverport = port
+    tornado.options.parse_config_file("logging.conf")
+    load_app(serverport, root)

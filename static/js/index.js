@@ -10,6 +10,10 @@ var streaming = false,
   photowall = document.querySelector('#photowall'),
   photowallimg = document.querySelector('#photowallimg'),
   timeremaining = document.querySelector('#timeremaining'),
+  photoprogress = document.querySelector('#photoprogress'),
+  progressmeter = document.querySelector('#progressmeter'),
+  progressmeterbox = document.querySelector('#progressmeterbox'),
+  lefthandside = document.querySelector('#lefthandside'),
   uuid = document.querySelector("#uuid"),
 	width = 320,
 	height = 0,
@@ -26,10 +30,11 @@ navigator.getMedia = (
 navigator.getMedia(
     {
       video: true,
-      audio: false
     },
     function(stream) {
-      if (navigator.mozGetUserMedia) {
+      if (navigator.getUserMedia) {
+        video.src = stream;
+      } else if (navigator.mozGetUserMedia) {
         video.mozSrcObject = stream;
       } else {
         var vendorURL = window.URL || window.webkitURL;
@@ -42,6 +47,31 @@ navigator.getMedia(
       console.log("An error occured! " + err);
     }
 );
+
+// errBack = function(error) {
+//   console.log("Capture error: " + error);
+// }
+
+// var videoObj = { "video": true };
+
+// window.addEventListener("DOMContentLoaded", function() {
+//   if(navigator.getUserMedia) {
+//     navigator.getUserMedia(videoObj, function(stream) {
+//       video.src = stream;
+//       video.play();
+//     }, errBack);
+//   } else if (navigator.webkitGetUserMedia) {
+//     navigator.webkitGetUserMedia(videoObj, function(stream) {
+//       video.src = window.webkitURL.createObjectURL(stream);
+//       video.play();
+//     }, errBack);
+//   } else if (navigator.mozGetUserMedia) {
+//     navigator.mozGetUserMedia(videoObj, function(stream) {
+//       video.src = window.URL.createObjectURL(stream);
+//       video.play();
+//     }, errBack);
+//   }
+// }, false);
 
 video.addEventListener('canplay', function(ev){
     if (!streaming) {
@@ -113,9 +143,16 @@ function uploadPhoto(counter) {
       }
       if (response.status == 201) {
         uploadPhoto(counter+1);
+        photoprogress.innerHTML = counter+1;
+        progressmeter.setAttribute('aria-valuenow', counter+1);
+        progressmeter.style.width = (100*(counter+1)/9) + '%';
       }
       if (response.status == 301) {
+        photoprogress.innerHTML = counter+1;
+        progressmeter.setAttribute('aria-valuenow', counter+1);
+        progressmeter.style.width = (100*(counter+1)/9) + '%';
         photoholderwall.style.display = 'none';
+        lefthandside.style.display = 'none';
         photowallimg.src = response.url;
         photowall.style.display = "block";
       }
@@ -125,6 +162,7 @@ function uploadPhoto(counter) {
 
 donebutton.addEventListener('click', function() {
   donebutton.style.display = "none";
+  progressmeterbox.style.display = "block";
   uploadPhoto(0);
 }, false);
 
