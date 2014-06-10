@@ -2,7 +2,8 @@ var streaming = false,
 	video       = document.querySelector('#video'),
 	canvas		= document.querySelector('#canvas'),
 	startbutton = document.querySelector('#startbutton'),
-  resetbutton = document.querySelector('#resetbutton'),
+  resetbutton0 = document.querySelector('#resetbutton0'),
+  resetbutton1 = document.querySelector('#resetbutton1'),
   thisphoto = document.querySelector('#thisphoto'),
   nextphoto = document.querySelector('#nextphoto'),
   donebutton = document.querySelector('#donebutton'),
@@ -13,6 +14,8 @@ var streaming = false,
   photoprogress = document.querySelector('#photoprogress'),
   progressmeter = document.querySelector('#progressmeter'),
   progressmeterbox = document.querySelector('#progressmeterbox'),
+  errorbox = document.querySelector('#errorbox'),
+  errordetails = document.querySelector('#errordetails'),
   lefthandside = document.querySelector('#lefthandside'),
   uuid = document.querySelector("#uuid"),
 	width = 320,
@@ -27,26 +30,36 @@ navigator.getMedia = (
 	navigator.mozGetUserMedia ||
 	navigator.msGetUserMedia);
 
-navigator.getMedia(
-    {
-      video: true,
-    },
-    function(stream) {
-      if (navigator.getUserMedia) {
-        video.src = stream;
-      } else if (navigator.mozGetUserMedia) {
-        video.mozSrcObject = stream;
-      } else {
-        var vendorURL = window.URL || window.webkitURL;
-        video.src = vendorURL.createObjectURL(stream);
+function errorCallback(err) {
+  errordetails.innerHTML = err;
+  video.style.display = "none";
+  errorbox.style.display = "block";
+}
+
+if (navigator.getMedia) {
+  navigator.getMedia(
+      {
+        video: true,
+      },
+      function(stream) {
+        if (navigator.getUserMedia) {
+          video.src = stream;
+        } else if (navigator.mozGetUserMedia) {
+          video.mozSrcObject = stream;
+        } else {
+          var vendorURL = window.URL || window.webkitURL;
+          video.src = vendorURL.createObjectURL(stream);
+        }
+        video.play();
+        startbutton.style.display = "block";
+      },
+      function(err) {
+        errorCallback(err);
       }
-      video.play();
-      startbutton.style.display = "block";
-    },
-    function(err) {
-      console.log("An error occured! " + err);
-    }
-);
+  );
+} else {
+  errorCallback("Browser not supported");
+}
 
 // errBack = function(error) {
 //   console.log("Capture error: " + error);
@@ -73,27 +86,31 @@ navigator.getMedia(
 //   }
 // }, false);
 
+function setAttributes() {
+  console.log([video.videoHeight, video.videoWidth, width]);
+  height = video.videoHeight / (video.videoWidth/width);
+  video.setAttribute('width', width);
+  video.setAttribute('height', height);
+  canvas.setAttribute('width', width);
+  canvas.setAttribute('height', height);
+  streaming = true;
+}
+
 video.addEventListener('canplay', function(ev){
-    if (!streaming) {
-      height = video.videoHeight / (video.videoWidth/width);
-      video.setAttribute('width', width);
-      video.setAttribute('height', height);
-      canvas.setAttribute('width', width);
-      canvas.setAttribute('height', height);
-      streaming = true;
-    }
+  setTimeout(setAttributes, 2000);
 }, false);
 
 function takepicture(counter) {
-    canvas.width = width;
-    canvas.height = height;
     canvas.getContext('2d').drawImage(video, 0, 0, width, height);
     var data = canvas.toDataURL('image/png');
     var photo = document.querySelector('#photo' + counter);
     photo.style.backgroundImage = "url("+data+")";
     if (counter == 8) {
       donebutton.style.display = "block";
-      nextphoto.style.display = "none";
+      thisphoto.innerHTML = "";
+      timeremaining.innerHTML = "";
+      video.pause();
+      video.style.display = "none";
     } else {
       thisphoto.innerHTML = moods[counter+1];
     }
@@ -113,7 +130,7 @@ function timergenerator(time) {
 
 startbutton.addEventListener('click', function(){
     startbutton.style.display = "none";
-    resetbutton.style.display = "block";
+    resetbutton0.style.display = "block";
     thisphoto.innerHTML = moods[0];
     for (var i=0; i<moods.length; i++) {
       setTimeout(callbackgenerator(i), (i+1)*delay*3);
@@ -166,6 +183,10 @@ donebutton.addEventListener('click', function() {
   uploadPhoto(0);
 }, false);
 
-resetbutton.addEventListener('click', function() {
+resetbutton0.addEventListener('click', function() {
+  window.location.reload();
+}, false);
+
+resetbutton1.addEventListener('click', function() {
   window.location.reload();
 }, false);

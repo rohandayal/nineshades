@@ -9,4 +9,4 @@ port = 10101
 address = None
 tempdir = os.getcwd()
 savedir = "static/shades/"
-templatefile = "static/img/template2.png"
+templatefile = "static/img/template3.png"
