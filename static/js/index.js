@@ -1,7 +1,8 @@
 var streaming = false,
 	video       = document.querySelector('#video'),
 	canvas		= document.querySelector('#canvas'),
-	startbutton = document.querySelector('#startbutton'),
+	init = document.querySelector('#init'),
+  startbutton = document.querySelector('#startbutton'),
   resetbutton0 = document.querySelector('#resetbutton0'),
   resetbutton1 = document.querySelector('#resetbutton1'),
   thisphoto = document.querySelector('#thisphoto'),
@@ -18,11 +19,19 @@ var streaming = false,
   errordetails = document.querySelector('#errordetails'),
   lefthandside = document.querySelector('#lefthandside'),
   uuid = document.querySelector("#uuid"),
+  fbshare = document.querySelector("#fbshare"),
+  modalbody = document.querySelector("#modalbody"),
+  timerslider = document.querySelector("#timerslider"),
+  timerslidercontainer = document.querySelector("#timerslidercontainer"),
+  timervalue = document.querySelector("#timervalue"),
 	width = 320,
-	height = 0,
-  delay = 1000;
+	height = 0;
+
+var allphotos = document.getElementsByClassName('photo');
 
 var moods = ['Happy', 'Angry', 'Sad', 'Disgusted', 'Scared', 'Silly', 'Surprised', 'Bored', 'Flirty'];
+
+var delay = parseInt(timerslider.value);
 
 navigator.getMedia = (
 	navigator.getUserMedia ||
@@ -51,7 +60,7 @@ if (navigator.getMedia) {
           video.src = vendorURL.createObjectURL(stream);
         }
         video.play();
-        startbutton.style.display = "block";
+        init.style.visibility = "visible";
       },
       function(err) {
         errorCallback(err);
@@ -87,7 +96,6 @@ if (navigator.getMedia) {
 // }, false);
 
 function setAttributes() {
-  console.log([video.videoHeight, video.videoWidth, width]);
   height = video.videoHeight / (video.videoWidth/width);
   video.setAttribute('width', width);
   video.setAttribute('height', height);
@@ -100,43 +108,64 @@ video.addEventListener('canplay', function(ev){
   setTimeout(setAttributes, 2000);
 }, false);
 
+function retakegenerator(counter) {
+  return function() {
+    nextphoto.style.visibility = "visible";
+    thisphoto.innerHTML = moods[counter];
+    setTimeout(callbackgenerator(counter, true), delay*1000);
+    for (var j=0; j<delay; j++) {
+      setTimeout(timergenerator(j), j*1000);
+    }
+  }
+}
+
 function takepicture(counter) {
     canvas.getContext('2d').drawImage(video, 0, 0, width, height);
-    var data = canvas.toDataURL('image/png');
     var photo = document.querySelector('#photo' + counter);
+    var data = canvas.toDataURL('image/jpg');
     photo.style.backgroundImage = "url("+data+")";
     if (counter == 8) {
       donebutton.style.display = "block";
-      thisphoto.innerHTML = "";
-      timeremaining.innerHTML = "";
-      video.pause();
-      video.style.display = "none";
+      nextphoto.style.visibility = "hidden";
+      for (var i=0; i<allphotos.length; i++) {
+        allphotos[i].addEventListener('click', retakegenerator(i));
+      }
     } else {
       thisphoto.innerHTML = moods[counter+1];
     }
 }
 
-function callbackgenerator(count) {
+function callbackgenerator(count, retake) {
   return function() {
     takepicture(count);
+    if (retake) {
+      nextphoto.style.visibility = "hidden";
+    }
   }
 }
 
 function timergenerator(time) {
   return function() {
-    timeremaining.innerHTML = 3 - (time % 3) ;
+    timeremaining.innerHTML = delay - time;
+    if (time>(delay-3)) {
+      timeremaining.style.color = "#FF0000";
+    } else {
+      timeremaining.style.color = "#000000";
+    }
   }
 }
 
 startbutton.addEventListener('click', function(){
+    timerslidercontainer.style.display = "none";
+    nextphoto.style.visibility = "visible";
     startbutton.style.display = "none";
     resetbutton0.style.display = "block";
     thisphoto.innerHTML = moods[0];
     for (var i=0; i<moods.length; i++) {
-      setTimeout(callbackgenerator(i), (i+1)*delay*3);
-    }
-    for (var j=0; j<moods.length*3; j++) {
-      setTimeout(timergenerator(j), j*delay);
+      setTimeout(callbackgenerator(i, false), (i+1)*delay*1000);
+      for (var j=0; j<delay; j++) {
+        setTimeout(timergenerator(j), (delay*i+j)*1000);
+      }
     }
 }, false);
 
@@ -179,7 +208,7 @@ function uploadPhoto(counter) {
 
 donebutton.addEventListener('click', function() {
   donebutton.style.display = "none";
-  progressmeterbox.style.display = "block";
+  progressmeterbox.style.display = "inline-block";
   uploadPhoto(0);
 }, false);
 
@@ -189,4 +218,42 @@ resetbutton0.addEventListener('click', function() {
 
 resetbutton1.addEventListener('click', function() {
   window.location.reload();
+}, false);
+
+timerslider.addEventListener('change', function() {
+  timervalue.innerHTML = timerslider.value;
+  delay = parseInt(timerslider.value);
+}, false);
+
+function showCommentPopup() {
+  modalbody.innerHTML = "<h5>Add a custom message:</h5><textarea id='caption' placeholder='....'></textarea><div style='width: 100%; text-align: right; margin-top: 20px;'><button id='submitcaption' class='btn btn-primary'>Share</button></div>";
+  $('#instructions').modal({show: true});
+  var submitcaption = document.querySelector('#submitcaption');
+  var caption = document.querySelector('#caption');
+  submitcaption.addEventListener('click', function() {
+    caption.disabled = true;
+    submitcaption.disabled = true;
+    var postjson = {
+      message: caption.value,
+      caption: "My nine shades",
+      url: 'http://9shades-rdtest.rhcloud.com/myshade/' + uuid.value + '.jpg'
+    };
+    FB.api('/me/photos', 'post', postjson, function(response) {
+      if (response.error) {
+        alert("There was an error sharing on Facebook. Please try again.");
+        caption.disabled = false;
+        submitcaption.disabled = false;
+      } else {
+        modalbody.innerHTML = "Your nine shades image has been shared and is available at <a href='https://www.facebook.com/me/photos_all'>your Facebook images page</a>.";
+      }
+    });
+  }, false);
+}
+
+fbshare.addEventListener('click', function() {
+  FB.login(function(response){
+    if (response.status == "connected") {
+      showCommentPopup();
+    }
+  }, {scope: 'publish_actions'});
 }, false);

@@ -22,6 +22,8 @@ def load_app(port, root):
     routers = [
         (r"/", HomeHandler),
         (r"/uploadphoto", UploadHandler),
+        (r"/nineshades/(.*)", ImageHandler),
+        (r"/privacy", PrivacyHandler),
         (r"/myshade/(.*)", tornado.web.StaticFileHandler, {'path': savedir})
     ]
 
@@ -35,5 +37,5 @@ def load_app(port, root):
 if __name__ == "__main__":
     root = path.dirname(__file__)
     serverport = port
-    tornado.options.parse_config_file("logging.conf")
+    tornado.options.parse_config_file(path.join(root, "logging.conf"))
     load_app(serverport, root)

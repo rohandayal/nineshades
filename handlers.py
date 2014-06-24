@@ -24,10 +24,10 @@ def getRandomGreeting():
 def generateImage(key):
     rawtemplate = Image.open(templatefile)
     newtemplate = rawtemplate.copy()
-    for i in range(0, 3):
-        for j in range(0, 3):
-            index = 3*i+j;
-            filename = join(tempdir, key + "-" + str(index) + ".png")
+    for j in range(0, 3):
+        for i in range(0, 3):
+            index = 3*j+i;
+            filename = join(tempdir, key + "-" + str(index) + ".jpg")
             im = Image.open(filename)
             if (im.size[0] > im.size[1]):
                 aspectratio = MAXWIDTH/im.size[0]
@@ -42,7 +42,7 @@ def generateImage(key):
             yoffset += 20
             newtemplate.paste(im, (xoffset, yoffset), mask = im)
             remove(filename)
-    newtemplate.save(join (savedir, key+".png"))
+    newtemplate.save(join (savedir, key+".jpg"))
     
 def S4():
     rd = int((1+random())*0x10000)
@@ -58,20 +58,36 @@ class HomeHandler(tornado.web.RequestHandler):
                     greeting = getRandomGreeting(),
                     uuid = generateUUID()
                     )
+    
+    def post(self):
+        self.render("index.tpl",
+                    moduleName="NineShades",
+                    greeting = getRandomGreeting(),
+                    uuid = generateUUID()
+                    )
 
 class UploadHandler(tornado.web.RequestHandler):
     def post(self):
         key = self.get_argument('key')
         counter = int(self.get_argument('counter'))
-        with open(join(tempdir, key + '-' + str(counter) + '.png'), 'wb') as imagefile:
-            starttime = time()
+        with open(join(tempdir, key + '-' + str(counter) + '.jpg'), 'wb') as imagefile:
             thisimage = b64decode(self.request.arguments['image'][0])
-            endtime1 = time() - starttime
             imagefile.write(thisimage)
-            endtime2 = time() - starttime
         if (counter == 8):
             generateImage(key)
-            endtime3 = time() - starttime
-            self.write({'status': 301, 'url': "/myshade/" + key+'.png', 'times': str(endtime1) + 's-' + str(endtime2) + 's-' + str(endtime3) + 's-'})
+            self.write({'status': 301, 'url': "/myshade/" + key+'.jpg'})
         else:
-            self.write({'status': 201, 'times': str(endtime1) + 's-' + str(endtime2) + 's-'})
+            self.write({'status': 201})
+
+class ImageHandler(tornado.web.RequestHandler):
+    def get(self, key):
+        self.render("image.tpl",
+                    moduleName = "NineShades",
+                    greeting = getRandomGreeting(),
+                    uuid = key)
+
+class PrivacyHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render("ppolicy.tpl",
+                    moduleName = "NineShades"
+                    )
